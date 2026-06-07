@@ -55,6 +55,7 @@ Extra tooling would be required to turn this into a 'proper' lakehouse, such as 
 See note above for comments on Trino.
 
 ### Pipeline workflow
+![diagram](./assets/hospitals-data-flow.jpg)
 The pipeline processes a 'snapshot' of the hospital data stored in OSM. This OSM
 data is treated as a 'single source of truth' and not expected to change frequently.
 Changes are most likely to be in the metadata tags or removal/addition of hospitals.
@@ -68,6 +69,10 @@ Full idempotency was not implemented, in order to keep change history and allow
 for auditability of the bronze layer. If the cost of the data size became an issue,
 the timestamp could be removed from the bronze files, causing the old files
 to be overwritten. 
+
+The Airflow extraction task saves geoJSON files to the MinIO Bronze layer,
+where dbt with the DuckDB adapter reads and processes the files, 
+materialising a dbt model in the silver layer as a (Geo)Parquet file.
 
 ### Production deployment
 In order to deploy to production a few changes would need to be made:
