@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    name: Python formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install ruff
+      - run: ruff format --check .
+      - run: ruff check --select I .
+
+  sql:
+    name: SQL lint
+    runs-on: ubuntu-latest
+    env:
+      MINIO_ACCESSKEY: dummy
+      MINIO_SECRETKEY: dummy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install sqlfluff sqlfluff-templater-dbt dbt-duckdb
+      - run: sqlfluff lint dbt_project/models/
+
+  dbt-parse:
+    name: dbt parse
+    runs-on: ubuntu-latest
+    env:
+      MINIO_ACCESSKEY: dummy
+      MINIO_SECRETKEY: dummy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install dbt-duckdb
+      - run: dbt parse --project-dir dbt_project --profiles-dir dbt_project

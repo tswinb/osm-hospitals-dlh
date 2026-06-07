@@ -1,0 +1,8 @@
+dbt-core==1.11.11
+dbt-duckdb==1.10.1
+jupysql==0.11.1
+jupyter==1.1.1
+minio==7.2.20
+pandas==3.0.3
+requests==2.34.2
+s3fs==2026.4.0

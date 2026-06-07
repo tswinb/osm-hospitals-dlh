@@ -1,0 +1,7 @@
+[sqlfluff]
+templater = dbt
+dialect = duckdb
+
+[sqlfluff:templater:dbt]
+project_dir = ./dbt_project
+profiles_dir = ./dbt_project

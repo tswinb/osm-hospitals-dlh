@@ -1,0 +1,9 @@
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["I"]  # import sorting (isort replacement)
+
+[tool.ruff.format]
+# ruff format is the black replacement
