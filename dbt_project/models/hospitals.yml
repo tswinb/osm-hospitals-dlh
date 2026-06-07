@@ -34,6 +34,7 @@ models:
         data_type: GEOMETRY('OGC:CRS84')
         data_tests:
           - not_null
+          - within_uk_bbox_4326
       - name: geometry_3035
         description: |
           Point geometry reprojected to EPSG:3035 (ETRS89-LAEA Europe),
@@ -41,6 +42,7 @@ models:
         data_type: GEOMETRY('EPSG:3035')
         data_tests:
           - not_null
+          - within_uk_bbox_3035
       - name: country
         description: "Country where the hospital is located"
         data_type: varchar
