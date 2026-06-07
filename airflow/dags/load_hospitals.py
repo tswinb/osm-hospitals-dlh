@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import time
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -23,6 +24,9 @@ WIKIDATA_AREAS = [
 ]
 BUCKET_NAME_BRONZE = "bronze"
 BUCKET_NAME_SILVER = "silver"
+
+# Sleep needed to avoid rate limiting
+SLEEP_BETWEEN_REQUESTS = 65
 
 
 def dict_to_json_bytes(json_dict: dict) -> BytesIO:
@@ -85,6 +89,7 @@ def load_hospitals():
 
     @task(
         map_index_template="{{ task.op_kwargs['area']['name'] }}",
+        max_active_tis_per_dag=2,
         retries=1,
         retry_delay=duration(seconds=65),
     )
@@ -133,15 +138,11 @@ def load_hospitals():
             )
             response.raise_for_status()
         except requests.RequestException as e:
-            raise AirflowException(
-                f"Failed to query Overpass API for {area['name']}: {str(e)}"
-            )
+            raise AirflowException(f"Failed to query Overpass API for {area['name']}: {str(e)}")
         try:
             data = response.json()
             data_count = len(data["elements"])
-            logging.info(
-                f"Retrieved {data_count} hospital locations for {area['name']}"
-            )
+            logging.info(f"Retrieved {data_count} hospital locations for {area['name']}")
             if data_count == 0:
                 raise AirflowException(f"No data returned for {area['name']}")
         except json.JSONDecodeError:
@@ -177,6 +178,10 @@ def load_hospitals():
             )
         except Exception as e:
             raise AirflowException(f"Failed to save geoJSON to MinIO: {str(e)}")
+
+        # Sleep to avoid hitting Overpass rate limits
+        logger.info(f"Sleeping {SLEEP_BETWEEN_REQUESTS} seconds to avoid rate limitting.")
+        time.sleep(SLEEP_BETWEEN_REQUESTS)
 
     # Specify DAG dependencies
     extract_hospitals.expand(area=WIKIDATA_AREAS)
