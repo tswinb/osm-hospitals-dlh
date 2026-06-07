@@ -1,2 +1,24 @@
 sources:
   - name: bronze
+    description: |
+      Raw data zone for the Data Lakehouse.
+      The MinIO bucket is partitioned by country and snapshot timestamp.
+      Files are never overwritten, but old snapshots may be deleted after a
+      certain retention period.
+    meta:
+      external_location: "read_json('s3://bronze/**/*.geojson', filename=true)"
+    tables:
+      - name: hospitals
+        description: |
+          Raw geospatial data for hospitals in the UK, stored in MinIO (bronze) as
+          GeoJSON files, extracted from OpenStreetMap (OSM) using the Overpass API.
+          Geometry is returned as the centered point of each hospital's location.
+          Query:
+          ```
+          [out:json][timeout:120];
+          area[wikidata="{code}"]->.searchArea;
+          nwr["amenity"="hospital"](area.searchArea);
+          convert item ::=::,::geom=geom(),_osm_type=type();
+          out center tags;
+          ```
+          where `{code}` is the Wikidata code for each UK country.
