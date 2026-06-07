@@ -1,0 +1,9 @@
+name: hospitals_dlh
+version: "1.0.0"
+
+profile: default
+
+models:
+  hospitals_dlh:
+    +materialized: external
+    +file_format: parquet
