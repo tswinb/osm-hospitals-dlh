@@ -22,12 +22,12 @@ models:
         data_tests:
           - unique
           - not_null
-      - name: name
+      - name: hospital_name
         description: "Name of the hospital"
         data_type: varchar
         data_tests:
           - not_null
-      - name: geometry
+      - name: geom
         description: |
           Point geometry of the hospital's centered location in
           EPSG:4326 (WGS84), encoded as WKB in the GeoParquet output
@@ -35,7 +35,7 @@ models:
         data_tests:
           - not_null
           - within_uk_bbox_4326
-      - name: geometry_3035
+      - name: geom_3035
         description: |
           Point geometry reprojected to EPSG:3035 (ETRS89-LAEA Europe),
           suitable for metric distance calculations
@@ -82,7 +82,7 @@ models:
         data_type: varchar
         data_tests:
           - not_null
-      - name: operator
+      - name: hospital_operator
         description: "Organization that operates the hospital, if available"
         data_type: varchar
         data_tests:
