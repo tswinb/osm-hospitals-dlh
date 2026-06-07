@@ -9,6 +9,7 @@ from io import BytesIO
 
 import requests
 from airflow.exceptions import AirflowException
+from airflow.providers.standard.operators.bash import BashOperator
 from airflow.sdk import dag, task
 from minio import Minio
 from pendulum import duration
@@ -24,6 +25,9 @@ WIKIDATA_AREAS = [
 ]
 BUCKET_NAME_BRONZE = "bronze"
 BUCKET_NAME_SILVER = "silver"
+
+DBT_PROFILES_DIR = os.getenv("DBT_PROFILES_DIR", "/opt/dbt_project")
+DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR", "/opt/dbt_project")
 
 # Sleep needed to avoid rate limiting
 SLEEP_BETWEEN_REQUESTS = 65
@@ -183,8 +187,20 @@ def load_hospitals():
         logger.info(f"Sleeping {SLEEP_BETWEEN_REQUESTS} seconds to avoid rate limitting.")
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
+    # Bash Operator to run dbt transformations and tests,
+    # processing the raw geoJSON from MinIO (bronze) and writing transformed
+    # GeoParquet back to MinIO (silver)
+    transform_hospitals = BashOperator(
+        task_id="transform_hospitals",
+        bash_command=(
+            "cd /opt/airflow && dbt build "
+            f"--project-dir {DBT_PROJECT_DIR} "
+            f"--profiles-dir {DBT_PROFILES_DIR}"
+        ),
+    )
+
     # Specify DAG dependencies
-    extract_hospitals.expand(area=WIKIDATA_AREAS)
+    extract_hospitals.expand(area=WIKIDATA_AREAS) >> transform_hospitals
 
 
 load_hospitals()
