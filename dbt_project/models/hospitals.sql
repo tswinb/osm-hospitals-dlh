@@ -63,7 +63,9 @@ cleaned_hospital_elements as (
             || ','
             || feature['geometry']['coordinates'][2]::varchar
         ) as id,
-        coalesce(feature['properties']['name']::varchar, 'Unknown') as hospital_name,
+        coalesce(
+            feature['properties']['name']::varchar, 'Unknown'
+        ) as hospital_name,
         st_point(
             feature['geometry']['coordinates'][1]::double,
             feature['geometry']['coordinates'][2]::double
@@ -93,8 +95,9 @@ cleaned_hospital_elements as (
         ) as healthcare_specialty,
         coalesce(feature['properties']['website']::varchar, 'Unknown')
             as website,
-        coalesce(feature['properties']['operator']::varchar, 'Unknown')
-            as hospital_operator,
+        coalesce(
+            feature['properties']['operator']::varchar, 'Unknown'
+        ) as hospital_operator,
         current_timestamp::timestamptz as silver_loaded_at
     from hospital_elements
 )
