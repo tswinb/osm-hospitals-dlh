@@ -33,18 +33,6 @@ DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR", "/opt/dbt_project")
 SLEEP_BETWEEN_REQUESTS = 65
 
 
-def dict_to_json_bytes(json_dict: dict) -> BytesIO:
-    """
-    Helper function to convert a dictionary to a BytesIO object containing JSON data.
-    """
-
-    # Convert JSON dictionary to JSON string
-    json_str = json.dumps(json_dict)
-    # Encode JSON string to bytes and wrap in BytesIO
-    json_bytes = json_str.encode("utf-8")
-    return BytesIO(json_bytes)
-
-
 def overpass_to_geojson(data: dict) -> dict:
     """
     Convert Overpass API JSON response to a GeoJSON FeatureCollection.
@@ -174,11 +162,12 @@ def load_hospitals():
         try:
             logger.info(f"Saving raw geoJSON for {area['name']} to MinIO (bronze)...")
             geojson_str = json.dumps(geojson)
+            geojson_encoded = geojson_str.encode("utf-8")
             minio_client.put_object(
                 bucket_name=BUCKET_NAME_BRONZE,
                 object_name=object_name,
-                data=dict_to_json_bytes(geojson),
-                length=len(geojson_str.encode("utf-8")),
+                data=BytesIO(geojson_encoded),
+                length=len(geojson_encoded),
             )
         except Exception as e:
             raise AirflowException(f"Failed to save geoJSON to MinIO: {str(e)}")
