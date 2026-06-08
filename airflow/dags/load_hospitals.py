@@ -8,10 +8,11 @@ from datetime import datetime, timezone
 from io import BytesIO
 
 import requests
-from airflow.exceptions import AirflowException
+from airflow.exceptions import AirflowException, AirflowFailException
 from airflow.providers.standard.operators.bash import BashOperator
 from airflow.sdk import dag, task
 from minio import Minio
+from minio.error import S3Error
 from pendulum import duration
 
 # Each entry is queried as a separate Overpass request to avoid rate-limiting.
@@ -107,9 +108,14 @@ def load_hospitals():
         # Create buckets. This is a workaround because initialising the buckets
         # in the docker-compose was not working.
         for bucket in [BUCKET_NAME_BRONZE, BUCKET_NAME_SILVER]:
-            if not minio_client.bucket_exists(bucket):
+            try:
                 minio_client.make_bucket(bucket)
                 logger.info(f"Created bucket: {bucket}")
+            except S3Error as e:
+                # Silently ignore race window issue with two simultaneous tasks
+                if e.code != "BucketAlreadyOwnedByYou":
+                    # fail the whole DAG run on unexpected MinIO error
+                    raise AirflowFailException(str(e))
 
         # for area in WIKIDATA_AREAS:
         logging.info(f"Querying Overpass API for hospitals in {area['name']}...")
@@ -130,11 +136,15 @@ def load_hospitals():
             )
             response.raise_for_status()
         except requests.RequestException as e:
-            raise AirflowException(f"Failed to query Overpass API for {area['name']}: {str(e)}")
+            raise AirflowException(
+                f"Failed to query Overpass API for {area['name']}: {str(e)}"
+            )
         try:
             data = response.json()
             data_count = len(data["elements"])
-            logging.info(f"Retrieved {data_count} hospital locations for {area['name']}")
+            logging.info(
+                f"Retrieved {data_count} hospital locations for {area['name']}"
+            )
             if data_count == 0:
                 raise AirflowException(f"No data returned for {area['name']}")
         except json.JSONDecodeError:
@@ -173,7 +183,9 @@ def load_hospitals():
             raise AirflowException(f"Failed to save geoJSON to MinIO: {str(e)}")
 
         # Sleep to avoid hitting Overpass rate limits
-        logger.info(f"Sleeping {SLEEP_BETWEEN_REQUESTS} seconds to avoid rate limitting.")
+        logger.info(
+            f"Sleeping {SLEEP_BETWEEN_REQUESTS} seconds to avoid rate limitting."
+        )
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
     # Bash Operator to run dbt transformations and tests,
