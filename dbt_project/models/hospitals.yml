@@ -1,0 +1,117 @@
+version: 2
+
+models:
+  - name: hospitals
+    description: |
+      Contains geospatial data for hospitals in the UK, extracted from
+      OpenStreetMap (OSM) using the Overpass API. The centered point
+      representing the hospital's location is accompanied by various attributes
+      of each hospital, such as name and healthcare specialty, where
+      available. Each record is associated with the Airflow DAG run that
+      processed it, and the timestamp of the bronze source file it was read
+      from, for traceability and debugging purposes. 
+
+      This model represents the latest snapshot of hospital data, and will
+      be overwritten on each dbt run.
+    columns:
+      - name: id
+        description: |
+          Hash of the geometrical point of the hospital, used as a unique
+          identifier for deduplication and traceability
+        data_type: varchar
+        data_tests:
+          - unique
+          - not_null
+      - name: hospital_name
+        description: "Name of the hospital"
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: geom
+        description: |
+          Point geometry of the hospital's centered location in
+          EPSG:4326 (WGS84), encoded as WKB in the GeoParquet output
+        data_type: GEOMETRY('OGC:CRS84')
+        data_tests:
+          - not_null
+          - within_uk_bbox_4326
+      - name: geom_3035
+        description: |
+          Point geometry reprojected to EPSG:3035 (ETRS89-LAEA Europe),
+          suitable for metric distance calculations
+        data_type: GEOMETRY('EPSG:3035')
+        data_tests:
+          - not_null
+          - within_uk_bbox_3035
+      - name: country
+        description: "Country where the hospital is located"
+        data_type: varchar
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ["England", "Scotland", "Wales", "Northern Ireland"]
+      - name: city
+        description: "City where the hospital is located"
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: street
+        description: "Street address of the hospital"
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: postcode
+        description: "Postal code of the hospital's location"
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: house_number
+        description: "House number of the hospital's location"
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: healthcare_specialty
+        description: |
+          Type of healthcare specialty provided by the hospital (e.g., general,
+          pediatric, etc.)
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: website
+        description: "Official website of the hospital, if available"
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: hospital_operator
+        description: "Organization that operates the hospital, if available"
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: airflow_run_id
+        description: |
+          Unique identifier for the Airflow DAG run that processed this
+          hospital record, for traceability and debugging purposes
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: bronze_loaded_at
+        description: |
+          Timestamp indicating when the hospital record was loaded into the
+          bronze layer
+        data_type: timestamp with time zone
+        data_tests:
+          - not_null
+      - name: bronze_path
+        description: |
+          Path to the bronze source file this record was read from, used to
+          identify which run's snapshot is reflected in the silver layer
+        data_type: varchar
+        data_tests:
+          - not_null
+      - name: silver_loaded_at
+        description: |
+          Timestamp indicating when the hospital record was processed and
+          loaded into the silver layer
+        data_type: timestamp with time zone
+        data_tests:
+          - not_null

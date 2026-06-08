@@ -1,0 +1,19 @@
+default:
+  outputs:
+    dev:
+      type: duckdb
+      path: ":memory:"
+      extensions:
+        - spatial
+        - parquet
+        - httpfs
+      filesystems:
+        - fs: s3
+          anon: false
+          key: "{{ env_var('MINIO_ACCESSKEY') }}"
+          secret: "{{ env_var('MINIO_SECRETKEY') }}"
+          client_kwargs:
+            endpoint_url: "http://{{ env_var('MINIO_ENDPOINT', 'minio:9000') }}"
+      threads: 1
+      external_root: "s3://silver" # Set silver as default layer for new models
+  target: dev
