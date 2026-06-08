@@ -1,10 +1,10 @@
 # UK Hospital Geospatial Data Lakehouse
 
-This repository extracts center points (among other attributes) for UK hospitals
-from OpenStreetMaps Overpass API, saves the results as geoJSON to a MinIO
-bronze layer, and then transforms the results into GeoParquet in a MinIO silver
-layer using dbt-duckdb. Orchestration takes place using the Airflow DAG
-`load_hospitals`.
+This repository extracts the location of all UK hospitals (represented as
+the geometrical center), among other attributes provided by the OpenStreetMaps
+Overpass API. The Airflow DAG `load_hospitals` saves the results as geoJSON to a
+MinIO bronze layer, and then transforms the results into GeoParquet in a MinIO
+silver layer using dbt-duckdb.
 
 ## Setup
 
@@ -44,9 +44,10 @@ could be required.
 ## Design decisions and trade-offs
 
 ### Tooling
-- **Docker:** Provides dependency isolation and consistency across environments
-- **Airflow:** Industry standard with large community support base.
-- **dbt:** Adds software engineering best practices (incl. testing) to the transformation step.
+- **Docker:** Provides dependency isolation and consistency across environments.
+- **Airflow:** Industry standard orchestration with large community support base.
+- **dbt:** Adds software engineering best practices (incl. data quality testing)
+to the transformation step.
 - **DuckDB:** Provides fast, lightweight in-memory data processing with dbt, MinIO and parquet integration.
 DuckDB was chosen as the dataset in question is small and does not require distributed processing.
 - **MinIO:** S3-compatible open-source object storage to serve as the data lake.
@@ -65,10 +66,8 @@ in dbt, the existing data is dropped and the model is rebuilt with the new data.
 Old snapshots could be removed from the bronze layer after a given retention period.
 Incremental loading is not supported for this in-memory DuckDB infrastructure.
 It would be possible if the backend was swapped out with Hive, Iceberg or Delta Lake.
-Full idempotency was not implemented, in order to keep change history and allow
-for auditability of the bronze layer. If the cost of the data size became an issue,
-the timestamp could be removed from the bronze files, causing the old files
-to be overwritten. 
+The pipeline allows for graceful retries. Rerunning the DAG will create the same
+result in the silver layer, aside from the timestamps and S3 path.
 
 The Airflow extraction task saves geoJSON files to the MinIO Bronze layer,
 where dbt with the DuckDB adapter reads and processes the files, 
@@ -78,7 +77,8 @@ materialising a dbt model in the silver layer as a (Geo)Parquet file.
 In order to deploy to production a few changes would need to be made:
 - Run Airflow Webserver, Scheduler, DB, etc. as separate nodes in a cluster (e.g. Kubernetes)
 - Change Airflow auth manager
+- Add Pytest testing of the Airflow DAG and any important logic within it
 - Assuming the lakehouse is to be extended with further pipelines, distributing processing
-may become necessary (e.g. Spark)
+may become necessary (Spark, replacing the DuckDB backend, etc.)
 - Add a deployment step to the GitHub Workflows
 - Add a data catalog
