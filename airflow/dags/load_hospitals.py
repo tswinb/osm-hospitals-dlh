@@ -136,15 +136,11 @@ def load_hospitals():
             )
             response.raise_for_status()
         except requests.RequestException as e:
-            raise AirflowException(
-                f"Failed to query Overpass API for {area['name']}: {str(e)}"
-            )
+            raise AirflowException(f"Failed to query Overpass API for {area['name']}: {str(e)}")
         try:
             data = response.json()
             data_count = len(data["elements"])
-            logging.info(
-                f"Retrieved {data_count} hospital locations for {area['name']}"
-            )
+            logging.info(f"Retrieved {data_count} hospital locations for {area['name']}")
             if data_count == 0:
                 raise AirflowException(f"No data returned for {area['name']}")
         except json.JSONDecodeError:
@@ -183,9 +179,7 @@ def load_hospitals():
             raise AirflowException(f"Failed to save geoJSON to MinIO: {str(e)}")
 
         # Sleep to avoid hitting Overpass rate limits
-        logger.info(
-            f"Sleeping {SLEEP_BETWEEN_REQUESTS} seconds to avoid rate limitting."
-        )
+        logger.info(f"Sleeping {SLEEP_BETWEEN_REQUESTS} seconds to avoid rate limitting.")
         time.sleep(SLEEP_BETWEEN_REQUESTS)
 
     # Bash Operator to run dbt transformations and tests,
